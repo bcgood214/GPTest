@@ -115,13 +115,13 @@ def recombination_alt(node, st, prob, co=True):
 	new_node = None
 	arg1 = None
 	arg2 = None
+	res = co
 	
 	
 	if random.random() < prob and co:
 		return st, False
 	if type(node) is tuple:
 		arg1, res = recombination_alt(node[1], st, (1/get_size(node[1])) * 0.8, co)
-			
 		
 		arg2, res = recombination_alt(node[2], st, (1/get_size(node[2])) * 0.8, res)
 		
@@ -129,7 +129,7 @@ def recombination_alt(node, st, prob, co=True):
 	else:
 		new_node = node
 	
-	return new_node, True
+	return new_node, res
 	
 	
 

@@ -4,6 +4,16 @@
 
 import math, random
 
+DEPTH = 5
+success_prob = 0.5
+reward = 10
+
+def unpack(arg):
+	if type(arg) is tuple:
+		return func_wrapper(arg)
+	else:
+		return arg
+	
 def unpack_args(arg1, arg2):
 	a = arg1
 	b = arg2
@@ -13,13 +23,39 @@ def unpack_args(arg1, arg2):
 		b = arg2[0](arg2[1], arg2[2])
 	return a, b
 
-## function definitions go here
+def func_wrapper(func):
+	if len(func) == 3:
+		return func[0](func[1], func[2])
+	else:
+		return func[0](func[1], func[2], func[3])
+
+## Primitive definitions go here
+
+def cmp_vals(arg1, arg2, arg3):
+	if arg1 == "<":
+		return arg2 < arg3
+	if arg1 == ">":
+		return arg2 > arg3
+	if arg1 == "==":
+		return arg2 == arg3
+	if arg1 == ">=":
+		return arg2 >= arg3
+	if arg1 == "<=":
+		return arg2 <= arg3
+	if arg1 == "!=":
+		return arg2 != arg3
 
 def int_value():
 	return random.randrange(1000)
 
 def double_value():
 	return random.randrange(1000) * random.random()
+
+def get_prob():
+	return success_prob
+
+def get_reward():
+	return reward
 
 def add(arg1, arg2):
 	a, b = unpack_args(arg1, arg2)
@@ -36,14 +72,25 @@ def mult(arg1, arg2):
 def div(arg1, arg2):
 	a, b = unpack_args(arg1, arg2)
 	return a / b
-	
-## end of function definitions
 
-term_set = [int_value, double_value]
-func_set = [mult, div, add, sub]
+def comparison():
+	cmp_ops = ["==", "<=", ">=", "<", ">"]
+	return random.choice(cmp_ops)
+	
+## End of primitive definitions
+
+term_set = [int_value, double_value, get_prob, get_reward]
+func_set = [mult, div, add, sub, cmp_vals]
 
 def gen_expr(func_set, term_set, method, max_depth, set_prob = 1):
-	if random.random() < set_prob or max_depth == 0:
+	# The root should be a comparison
+	if max_depth == 5:
+		arg1 = comparison()
+		arg2 = gen_expr(func_set, term_set, method, max_depth-1, set_prob)
+		arg3 = gen_expr(func_set, term_set, method, max_depth-1, set_prob)
+		expr = (cmp_vals, arg1, arg2, arg3)
+	elif random.random() < set_prob or max_depth == 0:
+		# Choose from the terminal set, then call the selected function to obtain a value for the node.
 		expr = random.choice(term_set)
 		expr = expr()
 	else:
@@ -84,6 +131,7 @@ def pick_node(node, prob):
 		else:
 			return node_arg1
 
+# Takes two individuals as arguments
 def recombination(node, other):
 	new_node = None
 	arg1 = None
@@ -94,7 +142,7 @@ def recombination(node, other):
 	if random.random() < 1/get_size(node):
 		node = subtree
 	if type(node) is tuple:
-		# Call the recombination function gain if an argument is a function, otherwise just get terminal from tree
+		# Call the recombination function again if an argument is a function, otherwise just get terminal from tree
 		if type(node[1]) is tuple:
 			arg1 = recombination(node[1], other)
 		else:
@@ -132,17 +180,15 @@ def recombination_alt(node, st, prob, co=True):
 	return new_node, res
 	
 	
-
+# Run an individual (function)
 def run(func):
-	func[0](arg1, arg2)
+	if type(func) is tuple:
+		return func[0](func[1], func[2])
+	else:
+		return func
 
 if __name__ == "__main__":
-	func1 = gen_expr(func_set, term_set, 'grow', 2, len(term_set)/len(func_set))
-	func2 = gen_expr(func_set, term_set, 'grow', 2, len(term_set)/len(func_set))
+	func1 = gen_expr(func_set, term_set, 'grow', 5, 0.3)
+	func2 = gen_expr(func_set, term_set, 'grow', 5, 0.6)
 	#func3 = recombination(func1, func2)
-	func4 = recombination_alt(func1, pick_node(func2, 1/get_size(func2)), (1/get_size(func1)) * 0.8)
 	print(func1)
-	print(func2)
-	#print(func3)
-	print(func4)
-	#print(get_size(func))

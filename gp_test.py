@@ -29,8 +29,6 @@ def func_wrapper(func):
 	else:
 		return func[0](func[1], func[2], func[3])
 
-## Primitive definitions go here
-
 def cmp_vals(arg1, arg2, arg3):
 	if arg1 == "<":
 		return arg2 < arg3
@@ -44,6 +42,14 @@ def cmp_vals(arg1, arg2, arg3):
 		return arg2 <= arg3
 	if arg1 == "!=":
 		return arg2 != arg3
+
+## Primitive definitions go here
+
+def ifelse(arg1, arg2, arg3):
+	if arg1[0](arg1[1], arg1[2], arg1[3]):
+		return run(arg2)
+	else:
+		return run(arg3)
 
 def int_value():
 	return random.randrange(1000)
@@ -80,24 +86,32 @@ def comparison():
 ## End of primitive definitions
 
 term_set = [int_value, double_value, get_prob, get_reward]
-func_set = [mult, div, add, sub, cmp_vals]
+func_set = [mult, div, add, sub, ifelse]
 
-def gen_expr(func_set, term_set, method, max_depth, set_prob = 1):
+def gen_expr(func_set, term_set, method, max_depth, set_prob = 1, canend = True):
 	# The root should be a comparison
 	if max_depth == 5:
 		arg1 = comparison()
 		arg2 = gen_expr(func_set, term_set, method, max_depth-1, set_prob)
 		arg3 = gen_expr(func_set, term_set, method, max_depth-1, set_prob)
 		expr = (cmp_vals, arg1, arg2, arg3)
-	elif random.random() < set_prob or max_depth == 0:
+	elif canend and (random.random() < set_prob or max_depth < 1):
 		# Choose from the terminal set, then call the selected function to obtain a value for the node.
 		expr = random.choice(term_set)
 		expr = expr()
 	else:
 		func = random.choice(func_set)
-		arg1 = gen_expr(func_set, term_set, method, max_depth-1, set_prob)
-		arg2 = gen_expr(func_set, term_set, method, max_depth-1, set_prob)
-		expr = (func, arg1, arg2)
+		if func.__name__ == "ifelse":
+			e1 = gen_expr(func_set, term_set, method, max_depth-1, set_prob)
+			e2 = gen_expr(func_set, term_set, method, max_depth-1, set_prob)
+			arg1 = (cmp_vals, comparison(), e1, e2)
+			arg2 = gen_expr(func_set, term_set, method, max_depth-1, set_prob, canend = False)
+			arg3 = gen_expr(func_set, term_set, method, max_depth-1, set_prob, canend = False)
+			expr = (func, arg1, arg2, arg3)
+		else:
+			arg1 = gen_expr(func_set, term_set, method, max_depth-1, set_prob)
+			arg2 = gen_expr(func_set, term_set, method, max_depth-1, set_prob)
+			expr = (func, arg1, arg2)
 	return expr
 
 def is_func(prim):

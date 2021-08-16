@@ -18,9 +18,11 @@ def unpack_args(arg1, arg2):
 	a = arg1
 	b = arg2
 	if type(arg1) is tuple:
-		a = arg1[0](arg1[1], arg1[2])
+		#a = arg1[0](arg1[1], arg1[2])
+		a = run(a)
 	if type(arg2) is tuple:
-		b = arg2[0](arg2[1], arg2[2])
+		#b = arg2[0](arg2[1], arg2[2])
+		b = run(b)
 	return a, b
 
 def func_wrapper(func):
@@ -30,6 +32,8 @@ def func_wrapper(func):
 		return func[0](func[1], func[2], func[3])
 
 def cmp_vals(arg1, arg2, arg3):
+	arg2 = run(arg2)
+	arg3 = run(arg3)
 	if arg1 == "<":
 		return arg2 < arg3
 	if arg1 == ">":
@@ -77,6 +81,8 @@ def mult(arg1, arg2):
 
 def div(arg1, arg2):
 	a, b = unpack_args(arg1, arg2)
+	if b == 0:
+		return 0
 	return a / b
 
 def comparison():
@@ -197,6 +203,8 @@ def recombination_alt(node, st, prob, co=True):
 # Run an individual (function)
 def run(func):
 	if type(func) is tuple:
+		if len(func) == 4:
+			return func[0](func[1], func[2], func[3])
 		return func[0](func[1], func[2])
 	else:
 		return func
@@ -205,4 +213,4 @@ if __name__ == "__main__":
 	func1 = gen_expr(func_set, term_set, 'grow', 5, 0.3)
 	func2 = gen_expr(func_set, term_set, 'grow', 5, 0.6)
 	#func3 = recombination(func1, func2)
-	print(func1)
+	print(run(func1))

@@ -31,6 +31,8 @@ def func_wrapper(func):
 	else:
 		return func[0](func[1], func[2], func[3])
 
+# cmp_vals is used at the root of individuals
+# it is also used as an argument in ifelse functions
 def cmp_vals(arg1, arg2, arg3):
 	arg2 = run(arg2)
 	arg3 = run(arg3)
@@ -107,6 +109,8 @@ def gen_expr(func_set, term_set, method, max_depth, set_prob = 1, canend = True)
 		expr = expr()
 	else:
 		func = random.choice(func_set)
+		# ifelse functions take 3 arguments, the first one being a cmp_vals function
+		# Since ifelse's arguments are all supposed to be functions, canend is set to False for arg2 and arg3.
 		if func.__name__ == "ifelse":
 			e1 = gen_expr(func_set, term_set, method, max_depth-1, set_prob)
 			e2 = gen_expr(func_set, term_set, method, max_depth-1, set_prob)

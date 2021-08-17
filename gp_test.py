@@ -154,6 +154,7 @@ def pick_fromargs(elems, nt):
 # Pick a node in a tree
 # Could be used for recombination/mutation
 # pick node based on the type passed to it
+# 'nt' for node type
 def pick_node(node, prob, nt="generic"):
 	if nt == "op":
 		if node in CMP_OPS and random.random() < prob:

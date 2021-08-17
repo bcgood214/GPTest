@@ -7,6 +7,7 @@ import math, random
 DEPTH = 5
 success_prob = 0.5
 reward = 10
+CMP_OPS = ["==", "<=", ">=", "<", ">", "!="]
 
 def unpack(arg):
 	if type(arg) is tuple:
@@ -88,8 +89,7 @@ def div(arg1, arg2):
 	return a / b
 
 def comparison():
-	cmp_ops = ["==", "<=", ">=", "<", ">"]
-	return random.choice(cmp_ops)
+	return random.choice(CMP_OPS)
 	
 ## End of primitive definitions
 
@@ -136,47 +136,94 @@ def get_size(node, size=0):
 	
 	return size + 1
 
+# Takes the arguments to a function and returns a subtree or None
+def pick_fromargs(elems, nt):
+	hits = 0
+	args = []
+	for arg in elems:
+		res = pick_node(arg, 1/(get_size(arg)), nt=nt)
+		if res is not None:
+			hits += 1
+		args.append(res)
+	if hits == 0:
+		return None
+	else:
+		options = [a for a in args if a is not None]
+		return random.choice(options)
+
 # Pick a node in a tree
 # Could be used for recombination/mutation
-def pick_node(node, prob):
+# pick node based on the type passed to it
+def pick_node(node, prob, nt="generic"):
+	if nt == "op":
+		if node in CMP_OPS and random.random() < prob:
+			return node
+		elif type(node) is tuple:
+			return pick_fromargs(node[1:], nt)
+		else:
+			return None
+	
+	if nt == "cmp":
+		if type(node) is tuple:
+			if node[0].__name__ == "cmp_vals" and random.random() < prob:
+				return node
+			else:
+				# Since cmp_vals function is being searched for, there is no need to look at the first argument
+				return pick_fromargs(node[2:], nt)
+		else:
+			return None
+				
 	if random.random() < prob:
 		return node
 	
 	if type(node) is tuple:
-		node_arg1 = pick_node(node[1], 1/(get_size(node[1])))
-		node_arg2 = pick_node(node[2], 1/(get_size(node[2])))
-		if node_arg1 is not None and node_arg2 is not None:
-			return random.choice([node_arg1, node_arg2])
-		if node_arg1 is None:
-			if node_arg2 is None:
-				return None
-			else:
-				return node_arg2
-		else:
-			return node_arg1
+		return pick_fromargs(node[1:], nt)
+
+# Recombination should be restricted for comparison functions and operators
 
 # Takes two individuals as arguments
 def recombination(node, other):
 	new_node = None
 	arg1 = None
 	arg2 = None
+	subtree = None
 	# Get subtree from other parent
-	subtree = pick_node(other, 1/get_size(other))
+	if type(node) is tuple and node[0].__name__ == "cmp_vals":
+		subtree = pick_node(other, 1/get_size(other), nt="cmp")
+	elif node in CMP_OPS:
+		subtree = pick_node(other, 1/get_size(other), nt="op")
+	else:
+		subtree = pick_node(other, 1/get_size(other))
 	# Potentially use the subtree for copying genetic material to child, otherwise use first parent
 	if random.random() < 1/get_size(node):
 		node = subtree
 	if type(node) is tuple:
 		# Call the recombination function again if an argument is a function, otherwise just get terminal from tree
-		if type(node[1]) is tuple:
-			arg1 = recombination(node[1], other)
-		else:
+		
+		# ifelse functions handled as a special case
+		if len(node) == 4:
 			arg1 = node[1]
-			
-		if type(node[2]) is tuple:
-			arg2 = recombination(node[2], other)
+			if type(node[2]) is tuple:
+				arg2 = recombination(node[2], other)
+			else:
+				arg2 = node[2]
+				
+			if type(node[3]) is tuple:
+				arg3 = recombination(node[3], other)
+			else:
+				arg3 = node[3]
+			new_node = (node[0], arg1, arg2, arg3)
 		else:
-			arg2 = node[2]
-		new_node = (node[0], arg1, arg2)
+			if type(node[1]) is tuple:
+				arg1 = recombination(node[1], other)
+			else:
+				arg1 = node[1]
+				
+			if type(node[2]) is tuple:
+				arg2 = recombination(node[2], other)
+			else:
+				arg2 = node[2]
+			new_node = (node[0], arg1, arg2)
 	else:
 		new_node = node
 	
@@ -216,5 +263,5 @@ def run(func):
 if __name__ == "__main__":
 	func1 = gen_expr(func_set, term_set, 'grow', 5, 0.3)
 	func2 = gen_expr(func_set, term_set, 'grow', 5, 0.6)
-	#func3 = recombination(func1, func2)
+	func3 = recombination(func1, func2)
 	print(run(func1))

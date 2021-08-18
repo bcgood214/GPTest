@@ -72,8 +72,14 @@ def pick_node(node, prob):
 		return node
 	
 	if type(node) is tuple:
-		node_arg1 = pick_node(node[1], 1/(get_size(node[1])))
-		node_arg2 = pick_node(node[2], 1/(get_size(node[2])))
+		node_arg1 = pick_node(node[1], 0.1)
+		while node_arg1 is None:
+			node_arg1 = pick_node(node[1], 0.1)
+		
+		node_arg2 = pick_node(node[2], 0.1)
+		while node_arg2 is None:
+			node_arg2 = pick_node(node[2], 0.1)
+		
 		if node_arg1 is not None and node_arg2 is not None:
 			return random.choice([node_arg1, node_arg2])
 		if node_arg1 is None:
@@ -89,9 +95,11 @@ def recombination(node, other):
 	arg1 = None
 	arg2 = None
 	# Get subtree from other parent
-	subtree = pick_node(other, 1/get_size(other))
+	subtree = pick_node(other, 0.1)
+	while subtree is None:
+		subtree = pick_node(other, 0.1)
 	# Potentially use the subtree for copying genetic material to child, otherwise use first parent
-	if random.random() < 1/get_size(node):
+	if random.random() < (1/get_size(node)) * 0.5:
 		node = subtree
 	if type(node) is tuple:
 		# Call the recombination function gain if an argument is a function, otherwise just get terminal from tree
@@ -137,7 +145,7 @@ def run(func):
 	func[0](arg1, arg2)
 
 def main(gens, popsize):
-	pool = [gen_expr(func_set, term_set, 'grow', 5, 0.6) for i in range(popsize)]
+	pool = [gen_expr(func_set, term_set, 'grow', 5, 0.3) for i in range(popsize)]
 	
 	for gen in range(gens):
 		if gen % 5 == 0:
@@ -157,4 +165,4 @@ def main(gens, popsize):
 		pool = nextgen
 
 if __name__ == "__main__":
-	main(100, 10)
+	main(100, 25)

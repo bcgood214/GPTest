@@ -6,6 +6,10 @@ import math, random, sys
 
 sys.setrecursionlimit(2000)
 
+prob = 0.5
+reward = 10
+cost = 10
+
 def unpack_args(arg1, arg2):
 	a = arg1
 	b = arg2
@@ -22,6 +26,15 @@ def int_value():
 
 def double_value():
 	return random.randrange(1000) * random.random()
+
+def get_prob():
+	return prob
+
+def get_reward():
+	return reward
+
+def get_cost():
+	return cost
 
 def add(arg1, arg2):
 	a, b = unpack_args(arg1, arg2)
@@ -46,11 +59,20 @@ def ifelse(arg1, arg2, arg3):
 		return run(arg2)
 	else:
 		return run(arg3)
+
+def prob_under(arg1):
+	return prob < run(arg1)
+
+def reward_over(arg1):
+	return reward > run(arg1)
+
+def cost_under(arg1):
+	return cost < run(arg1)
 	
 ## end of function definitions
 
-term_set = [int_value, double_value]
-func_set = [mult, div, add, sub, ifelse]
+term_set = [int_value, double_value, get_prob, get_reward, get_cost]
+func_set = [prob_under, cost_under, reward_over, ifelse]
 
 def gen_expr(func_set, term_set, method, max_depth, set_prob = 1):
 	if random.random() < set_prob or max_depth == 0:
@@ -65,8 +87,7 @@ def gen_expr(func_set, term_set, method, max_depth, set_prob = 1):
 			expr = [func, arg1, arg2, arg3]
 		else:
 			arg1 = gen_expr(func_set, term_set, method, max_depth-1, set_prob)
-			arg2 = gen_expr(func_set, term_set, method, max_depth-1, set_prob)
-			expr = [func, arg1, arg2]
+			expr = [func, arg1]
 	return expr
 
 def is_func(prim):
@@ -77,8 +98,8 @@ def is_func(prim):
 def get_size(node, size=0):
 	if type(node) is list:
 		size = get_size(node[1], size)
-		size = get_size(node[2], size)
 		if len(node) == 4:
+			size = get_size(node[2], size)
 			size = get_size(node[3], size)
 	
 	return size + 1
@@ -114,26 +135,6 @@ def pick_node(node, prob):
 #				return node_arg2
 #		else:
 #			return node_arg1
-
-def eval(ind):
-	if get_size(ind) > 10:
-		return -10
-	if get_size(ind) > 20:
-		return -30
-	if get_size(ind) > 30:
-		return -50
-	if get_size(ind) > 40:
-		return -70
-	ind = run(ind)
-	if ind < 1000 and ind > 800:
-		if ind < 950 and ind > 850:
-			if ind < 900 and ind > 875:
-				return 4
-			return 3
-		return 2
-	if ind < 500:
-		return -1
-	return 1
 
 def recombination(node, other):
 	new_node = None
@@ -190,13 +191,31 @@ def recombination_alt(node, st, prob, co=True):
 	
 	return new_node, res
 	
+def eval(ind):
+	val = 0
+	ind = run(ind)
+	if get_size(ind) > 5:
+		val -= 10
+	if get_size(ind) > 10:
+		val -= 20
+	if get_size(ind) > 15 :
+		val -= 30
+	if get_size(ind) > 20:
+		val -= 40
+	
+	if ind == 1:
+		val += 50
+	elif ind == 0:
+		val += 50
+	
+	return val
 	
 
 def run(func):
 	if type(func) is not list:
 		return func
-	if len(func) == 3:
-		return func[0](func[1], func[2])
+	if len(func) == 2:
+		return func[0](func[1])
 	elif len(func) == 4:
 		return func[0](func[1], func[2], func[3])
 

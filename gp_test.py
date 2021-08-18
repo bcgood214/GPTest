@@ -2,12 +2,24 @@
 # 2021-07-16
 # Test program for genetic programming
 
-import math, random
+import math, random, string
 
 DEPTH = 5
 success_prob = 0.5
 reward = 10
 CMP_OPS = ["==", "<=", ">=", "<", ">", "!="]
+FUNC_NAMES = []
+
+def gen_name():
+	while True:
+		s = ""
+		s += random.choice(string.ascii_letters)
+		s += random.choice(string.ascii_letters)
+		s += random.choice(string.ascii_letters)
+		s += str(random.randint(1, 100))
+		if s not in FUNC_NAMES:
+			return s
+		
 
 def unpack(arg):
 	if type(arg) is tuple:
@@ -266,3 +278,4 @@ if __name__ == "__main__":
 	func2 = gen_expr(func_set, term_set, 'grow', 5, 0.6)
 	func3 = recombination(func1, func2)
 	print(run(func1))
+	print(func3)

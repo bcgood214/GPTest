@@ -136,13 +136,25 @@ def recombination_alt(node, st, prob, co=True):
 def run(func):
 	func[0](arg1, arg2)
 
+def main(gens, popsize):
+	pool = [gen_expr(func_set, term_set, 'grow', 5, 0.6) for i in range(popsize)]
+	
+	for gen in range(gens):
+		if gen % 5 == 0:
+			print("Printing individuals:")
+			for ind in pool:
+				print(ind)
+			print("End of pool")
+			
+		nextgen = []
+		for i in range(popsize):
+			parents = random.choices(pool, k=2)
+			
+			child = recombination(parents[0], parents[1])
+			
+			nextgen.append(child)
+			
+		pool = nextgen
+
 if __name__ == "__main__":
-	func1 = gen_expr(func_set, term_set, 'grow', 2, len(term_set)/len(func_set))
-	func2 = gen_expr(func_set, term_set, 'grow', 2, len(term_set)/len(func_set))
-	#func3 = recombination(func1, func2)
-	func4 = recombination_alt(func1, pick_node(func2, 1/get_size(func2)), (1/get_size(func1)) * 0.8)
-	print(func1)
-	print(func2)
-	#print(func3)
-	print(func4)
-	#print(get_size(func))
+	main(100, 10)

@@ -2,15 +2,17 @@
 # 2021-07-16
 # Test program for genetic programming
 
-import math, random
+import math, random, sys
+
+sys.setrecursionlimit(2000)
 
 def unpack_args(arg1, arg2):
 	a = arg1
 	b = arg2
-	if type(arg1) is tuple:
-		a = arg1[0](arg1[1], arg1[2])
-	if type(arg2) is tuple:
-		b = arg2[0](arg2[1], arg2[2])
+	if type(arg1) is list:
+		a = run(arg1)
+	if type(arg2) is list:
+		b = run(arg2)
 	return a, b
 
 ## function definitions go here
@@ -35,12 +37,20 @@ def mult(arg1, arg2):
 
 def div(arg1, arg2):
 	a, b = unpack_args(arg1, arg2)
+	if b == 0:
+		return 1
 	return a / b
+
+def ifelse(arg1, arg2, arg3):
+	if run(arg1):
+		return run(arg2)
+	else:
+		return run(arg3)
 	
 ## end of function definitions
 
 term_set = [int_value, double_value]
-func_set = [mult, div, add, sub]
+func_set = [mult, div, add, sub, ifelse]
 
 def gen_expr(func_set, term_set, method, max_depth, set_prob = 1):
 	if random.random() < set_prob or max_depth == 0:
@@ -48,9 +58,15 @@ def gen_expr(func_set, term_set, method, max_depth, set_prob = 1):
 		expr = expr()
 	else:
 		func = random.choice(func_set)
-		arg1 = gen_expr(func_set, term_set, method, max_depth-1, set_prob)
-		arg2 = gen_expr(func_set, term_set, method, max_depth-1, set_prob)
-		expr = (func, arg1, arg2)
+		if func.__name__ == "ifelse":
+			arg1 = gen_expr(func_set, term_set, method, max_depth-1, set_prob)
+			arg2 = gen_expr(func_set, term_set, method, max_depth-1, set_prob)
+			arg3 = gen_expr(func_set, term_set, method, max_depth-1, set_prob)
+			expr = [func, arg1, arg2, arg3]
+		else:
+			arg1 = gen_expr(func_set, term_set, method, max_depth-1, set_prob)
+			arg2 = gen_expr(func_set, term_set, method, max_depth-1, set_prob)
+			expr = [func, arg1, arg2]
 	return expr
 
 def is_func(prim):
@@ -59,9 +75,11 @@ def is_func(prim):
 	return False
 
 def get_size(node, size=0):
-	if type(node) is tuple:
+	if type(node) is list:
 		size = get_size(node[1], size)
 		size = get_size(node[2], size)
+		if len(node) == 4:
+			size = get_size(node[3], size)
 	
 	return size + 1
 
@@ -70,19 +88,52 @@ def get_size(node, size=0):
 def pick_node(node, prob):
 	if random.random() < prob:
 		return node
-	
-	if type(node) is tuple:
-		node_arg1 = pick_node(node[1], 1/(get_size(node[1])))
-		node_arg2 = pick_node(node[2], 1/(get_size(node[2])))
-		if node_arg1 is not None and node_arg2 is not None:
-			return random.choice([node_arg1, node_arg2])
-		if node_arg1 is None:
-			if node_arg2 is None:
-				return None
-			else:
-				return node_arg2
+		
+	if type(node) is list:
+		args = []
+		hits = 0
+		for n in node[1:]:
+			arg = pick_node(n, 1/get_size(n))
+			if arg is not None:
+				hits += 1
+			args.append(arg)
+		if hits == 0:
+			return None
 		else:
-			return node_arg1
+			return random.choice([a for a in args if a is not None])
+		
+#	if type(node) is list:
+#		node_arg1 = pick_node(node[1], 1/get_size(node[1]))
+#		node_arg2 = pick_node(node[2], 1/get_size(node[2]))
+#		if node_arg1 is not None and node_arg2 is not None:
+#			return random.choice([node_arg1, node_arg2])
+#		if node_arg1 is None:
+#			if node_arg2 is None:
+#				return None
+#			else:
+#				return node_arg2
+#		else:
+#			return node_arg1
+
+def eval(ind):
+	if get_size(ind) > 10:
+		return -10
+	if get_size(ind) > 20:
+		return -30
+	if get_size(ind) > 30:
+		return -50
+	if get_size(ind) > 40:
+		return -70
+	ind = run(ind)
+	if ind < 1000 and ind > 800:
+		if ind < 950 and ind > 850:
+			if ind < 900 and ind > 875:
+				return 4
+			return 3
+		return 2
+	if ind < 500:
+		return -1
+	return 1
 
 def recombination(node, other):
 	new_node = None
@@ -91,20 +142,28 @@ def recombination(node, other):
 	# Get subtree from other parent
 	subtree = pick_node(other, 1/get_size(other))
 	# Potentially use the subtree for copying genetic material to child, otherwise use first parent
-	if random.random() < 1/get_size(node):
+	if random.random() < 1/get_size(node) * 0.5:
 		node = subtree
-	if type(node) is tuple:
-		# Call the recombination function gain if an argument is a function, otherwise just get terminal from tree
-		if type(node[1]) is tuple:
-			arg1 = recombination(node[1], other)
-		else:
-			arg1 = node[1]
+	if type(node) is list:
+		# Call the recombination function again if an argument is a function, otherwise just get terminal from tree
+		new_node = [node[0]]
+		for n in node[1:]:
+			arg = None
+			if type(n) is list:
+				arg = recombination(n, other)
+			else:
+				arg = n
+			new_node.append(arg)
+#		if type(node[1]) is tuple:
+#			arg1 = recombination(node[1], other)
+#		else:
+#			arg1 = node[1]
 			
-		if type(node[2]) is tuple:
-			arg2 = recombination(node[2], other)
-		else:
-			arg2 = node[2]
-		new_node = (node[0], arg1, arg2)
+#		if type(node[2]) is tuple:
+#			arg2 = recombination(node[2], other)
+#		else:
+#			arg2 = node[2]
+#		new_node = (node[0], arg1, arg2)
 	else:
 		new_node = node
 	
@@ -134,7 +193,12 @@ def recombination_alt(node, st, prob, co=True):
 	
 
 def run(func):
-	func[0](arg1, arg2)
+	if type(func) is not list:
+		return func
+	if len(func) == 3:
+		return func[0](func[1], func[2])
+	elif len(func) == 4:
+		return func[0](func[1], func[2], func[3])
 
 def main(gens, popsize):
 	pool = [gen_expr(func_set, term_set, 'grow', 5, 0.6) for i in range(popsize)]
@@ -147,8 +211,9 @@ def main(gens, popsize):
 			print("End of pool")
 			
 		nextgen = []
+		fitness = [eval(ind) for ind in pool]
 		for i in range(popsize):
-			parents = random.choices(pool, k=2)
+			parents = random.choices(pool, fitness, k=2)
 			
 			child = recombination(parents[0], parents[1])
 			

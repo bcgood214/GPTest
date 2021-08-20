@@ -4,6 +4,8 @@
 
 import math, random
 
+TARGET = None
+
 def unpack_args(arg1, arg2):
 	a = arg1
 	b = arg2
@@ -35,6 +37,8 @@ def mult(arg1, arg2):
 
 def div(arg1, arg2):
 	a, b = unpack_args(arg1, arg2)
+	if b == 0:
+		return 1
 	return a / b
 	
 ## end of function definitions
@@ -140,29 +144,45 @@ def recombination_alt(node, st, prob, co=True):
 	return new_node, res
 	
 	
+def eval(ind):
+	return abs(TARGET - run(ind))
 
 def run(func):
-	func[0](arg1, arg2)
+	if type(func) is tuple:
+		return func[0](func[1], func[2])
+	return func
 
 def main(gens, popsize):
 	pool = [gen_expr(func_set, term_set, 'grow', 5, 0.3) for i in range(popsize)]
 	
 	for gen in range(gens):
-		if gen % 5 == 0:
-			print("Printing individuals:")
-			for ind in pool:
-				print(ind)
-			print("End of pool")
+#		if gen % 5 == 0:
+#			print("Printing individuals:")
+#			for ind in pool:
+#				print(ind)
+#			print("End of pool")
 			
 		nextgen = []
+		fitness = [1/eval(ind) for ind in pool]
 		for i in range(popsize):
-			parents = random.choices(pool, k=2)
+			parents = random.choices(pool, fitness, k=2)
 			
 			child = recombination(parents[0], parents[1])
 			
 			nextgen.append(child)
 			
 		pool = nextgen
+	
+	fittest = pool[0]
+	best_fitness = eval(pool[0])
+	for ind in pool[1:]:
+		ind_fitness = eval(ind)
+		if ind_fitness < best_fitness:
+			fittest = ind
+			best_fitness = ind_fitness
+	
+	return fittest
 
 if __name__ == "__main__":
-	main(100, 25)
+	TARGET = int(input("Enter target value: "))
+	print(main(100, 25))
